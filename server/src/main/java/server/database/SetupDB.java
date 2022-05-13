@@ -3,6 +3,7 @@ package server.database;
 import core.interact.UserInteractor;
 import server.database.models.*;
 
+import java.io.File;
 import java.io.FileInputStream;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -15,19 +16,20 @@ public abstract class SetupDB {
         return connection;
     }
 
-    public static boolean createConnection(UserInteractor userInteractor) {
+    public static boolean createConnection(UserInteractor userInteractor, File cfgFile) {
         Connection c;
         try {
             Class.forName("org.postgresql.Driver");
             Properties info = new Properties();
-//            info.load(new FileInputStream("db.cfg"));
-            c = DriverManager.getConnection("jdbc:postgresql://localhost:5432/studs", "s336225", "eoc653");
+            info.load(new FileInputStream(cfgFile));
+            c = DriverManager.getConnection("jdbc:postgresql://localhost:5432/studs", info.getProperty("DB_LOGIN"), info.getProperty("DB_PASSWORD"));
 
             userInteractor.broadcastMessage("Успешное соединение с БД.", true);
 
             connection = c;
             return true;
         } catch (Exception e) {
+            e.printStackTrace();
             userInteractor.broadcastMessage("Ошибка при соединении с БД.", true);
             return false;
         }

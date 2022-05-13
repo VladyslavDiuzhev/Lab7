@@ -1,6 +1,7 @@
 package server.database.models;
 
 import core.essentials.UserInfo;
+import server.cryptography.EncryptorSHA_1;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -58,7 +59,7 @@ public class UserModel extends Model {
         PreparedStatement stmt;
         StringBuilder CreateSql = new StringBuilder();
         try {
-            CreateSql.append(String.format("INSERT INTO %s (login, password) VALUES ('%s', '%s')", this.name, user.getLogin(), user.getPassword()));
+            CreateSql.append(String.format("INSERT INTO %s (login, password) VALUES ('%s', '%s')", this.name, user.getLogin(), EncryptorSHA_1.encryptPassword(user.getPassword())));
             stmt = connection.prepareStatement(CreateSql.toString());
             stmt.execute();
             return true;

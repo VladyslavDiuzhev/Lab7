@@ -102,7 +102,7 @@ public class App {
     }
 
     private static boolean uploadInfoDB() {
-        if (!SetupDB.createConnection(adminInteractor)) {
+        if (!SetupDB.createConnection(adminInteractor, new File("db.cfg"))) {
             return false;
         }
         SetupDB.createTables(adminInteractor);
@@ -233,8 +233,6 @@ public class App {
         public void run() {
             Message msg;
             lock.lock();
-//            System.out.println(authorizedUsers);
-//            System.out.println(currentUser);
             preCommand.setAuthor(authorizedUsers.get(currentUser));
             Command command = CommandRouter.getCommand(preCommand, connectionDb);
             if (command instanceof Register) {
