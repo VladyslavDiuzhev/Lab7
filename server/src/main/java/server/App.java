@@ -40,7 +40,6 @@ public class App {
     private static final UserInteractor adminInteractor = new ConsoleInteractor();
     private static Stack<Vehicle> collection = new Stack<>();
     private static ZonedDateTime initDateTime = ZonedDateTime.now();
-    private static final File file = new File("collection.xml");
     private static ServerSocket serverSocket;
 
     private static final int MAX_CONNECTIONS = 10;
@@ -75,13 +74,13 @@ public class App {
     private static boolean createShutdownHook() {
         try {
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-                try {
-                    FileWriter fileWriter = new FileWriter(file);
-                    fileWriter.write(VehicleStackXmlParser.stackToXml(new StackInfo(collection, Vehicle.getMaxId(), initDateTime)));
-                    fileWriter.flush();
-                } catch (Exception e) {
-                    adminInteractor.broadcastMessage(e.getMessage(), true);
-                }
+//                try {
+//                    FileWriter fileWriter = new FileWriter(file);
+//                    fileWriter.write(VehicleStackXmlParser.stackToXml(new StackInfo(collection, Vehicle.getMaxId(), initDateTime)));
+//                    fileWriter.flush();
+//                } catch (Exception e) {
+//                    adminInteractor.broadcastMessage(e.getMessage(), true);
+//                }
 
                 adminInteractor.broadcastMessage("Остановка севера.", true);
             }));
@@ -92,17 +91,18 @@ public class App {
         }
     }
 
-    private static void uploadInfo() throws FileNotFoundException, NoSuchFieldException, IllegalAccessException {
-        StackInfo stackInfo = VehicleStackXmlParser.parseFromXml(file);
-        collection = Objects.requireNonNull(stackInfo).getStack();
-        initDateTime = stackInfo.getCreationDate();
-        Field field = Vehicle.class.getDeclaredField("maxId");
-        field.setAccessible(true);
-        field.setInt(null, stackInfo.getMaxId());
-    }
+//    private static void uploadInfo() throws FileNotFoundException, NoSuchFieldException, IllegalAccessException {
+//        StackInfo stackInfo = VehicleStackXmlParser.parseFromXml(file);
+//        collection = Objects.requireNonNull(stackInfo).getStack();
+//        initDateTime = stackInfo.getCreationDate();
+//        Field field = Vehicle.class.getDeclaredField("maxId");
+//        field.setAccessible(true);
+//        field.setInt(null, stackInfo.getMaxId());
+//    }
 
     private static boolean uploadInfoDB() {
-        if (!SetupDB.createConnection(adminInteractor, new File("db.cfg"))) {
+        File file1 =  new File("db.cfg");
+        if (!SetupDB.createConnection(adminInteractor,file1)) {
             return false;
         }
         SetupDB.createTables(adminInteractor);
