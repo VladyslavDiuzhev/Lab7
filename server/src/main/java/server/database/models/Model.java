@@ -16,6 +16,10 @@ public abstract class Model {
 
     }
 
+    public String getName() {
+        return name;
+    }
+
     public boolean createTable(Connection c) {
 
         PreparedStatement stmt;
@@ -31,12 +35,12 @@ public abstract class Model {
 
             stmt = c.prepareStatement(CreateSql.toString());
             stmt.executeUpdate();
-            System.out.printf("Таблица %s создана!%n", this.name);
             return true;
 
         } catch (Exception e) {
-            System.out.printf("Таблица %s уже существует!%n", this.name);
             return false;
         }
     }
+
+
 }

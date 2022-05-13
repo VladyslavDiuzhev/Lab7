@@ -9,4 +9,6 @@ public interface Precommand extends Serializable {
     String getCommandName();
     Object getArg();
     boolean isFromScript();
+    void setAuthor(String login);
+    String getAuthor();
 }

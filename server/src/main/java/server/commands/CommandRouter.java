@@ -8,6 +8,7 @@ import server.commands.interfaces.Command;
 import core.interact.UserInteractor;
 
 import java.awt.*;
+import java.sql.Connection;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -18,40 +19,45 @@ import java.util.List;
  * @version 1.0
  */
 public abstract class CommandRouter {
-    public static Command getCommand(Precommand precommand) {
+    public static Command getCommand(Precommand precommand, Connection connection) {
         switch (precommand.getCommandName()) {
+            case "register":
+                if (precommand instanceof ObjectPrecommand && precommand.getArg() instanceof UserInfo) {
+                    return new Register((UserInfo) precommand.getArg(), connection);
+                }
+                return null;
             case "authorize":
                 if (precommand instanceof ObjectPrecommand && precommand.getArg() instanceof UserInfo) {
-                    return new Authorize((UserInfo) precommand.getArg());
+                    return new Authorize((UserInfo) precommand.getArg(), connection);
                 }
                 return null;
             case "help":
                 return new Help();
             case "info":
-                return new Info();
+                return new Info(connection);
             case "show":
                 return new Show();
             case "add":
                 if (precommand instanceof ObjectPrecommand && precommand.getArg() instanceof Vehicle) {
-                    return new Add(precommand);
+                    return new Add(precommand, connection);
                 }
                 return null;
             case "update":
                 if (precommand instanceof ObjectIdPrecommand) {
-                    return new Update(precommand);
+                    return new Update(precommand, connection);
                 }
 
             case "remove_by_id":
                 if (precommand instanceof IdPrecommand) {
-                    return new RemoveById(((IdPrecommand) precommand).getId());
+                    return new RemoveById((IdPrecommand) precommand, connection);
                 }
                 return null;
             case "clear":
-                return new Clear();
+                return new Clear(precommand, connection);
             case "remove_first":
-                return new RemoveFirst();
+                return new RemoveFirst(precommand, connection);
             case "add_if_min":
-                return new AddIfMin(precommand);
+                return new AddIfMin(precommand, connection);
             case "reorder":
                 return new Reorder();
             case "group_counting_by_id":
@@ -69,7 +75,7 @@ public abstract class CommandRouter {
 
             case "info_by_id":
                 if (precommand instanceof IdPrecommand) {
-                    return new InfoById(precommand);
+                    return new InfoById(precommand, connection);
                 }
                 return null;
             default:

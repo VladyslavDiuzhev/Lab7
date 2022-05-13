@@ -28,6 +28,10 @@ public abstract class PreCommandRouter {
 
 
         switch (command) {
+            case "register":
+                ObjectPrecommand registerPrecommand = new ObjectPrecommand("register");
+                registerPrecommand.preprocess(Authorizer.getUserInfo(interactor), false);
+                return registerPrecommand;
             case "authorize":
                 ObjectPrecommand authorizePrecommand = new ObjectPrecommand("authorize");
                 authorizePrecommand.preprocess(Authorizer.getUserInfo(interactor), false);

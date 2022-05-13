@@ -8,7 +8,10 @@ import core.essentials.Vehicle;
 import core.essentials.VehicleType;
 import core.interact.Message;
 import core.interact.UserInteractor;
+import server.database.repositories.UserRepository;
+import server.database.repositories.VehicleRepository;
 
+import java.sql.Connection;
 import java.util.ArrayList;
 import java.util.Stack;
 
@@ -21,14 +24,22 @@ import java.util.Stack;
 public class Add implements Command, Preprocessable {
     protected final boolean fromScript;
     protected Vehicle vehicle;
+    protected VehicleRepository vehicleRepository;
 
-    public Add(boolean from_script) {
+    public Add(boolean from_script, Connection connection) {
         this.fromScript = from_script;
+        this.vehicleRepository = new VehicleRepository(connection);
     }
 
-    public Add(Precommand precommand){
+    public Add(Precommand precommand, Connection connection){
         this.fromScript = precommand.isFromScript();
         this.vehicle = (Vehicle) precommand.getArg();
+        this.vehicleRepository = new VehicleRepository(connection);
+
+        UserRepository userRepository = new UserRepository(connection);
+//        this.vehicle.setOwnerId(0);
+//        System.out.println(precommand.getAuthor());
+        this.vehicle.setOwnerId(userRepository.getByLogin(precommand.getAuthor()).getId());
     }
 
     @Override
@@ -42,12 +53,17 @@ public class Add implements Command, Preprocessable {
     @Override
     public Message execute(Stack<Vehicle> stack) {
         if (this.vehicle.getName() == null | this.vehicle.getCoordinates() == null| this.vehicle.getCreationDate() == null
-        | this.vehicle.getType() == null | this.vehicle.getEnginePower() <= 0){
+        | this.vehicle.getType() == null | this.vehicle.getOwnerId() == 0 | this.vehicle.getEnginePower() <= 0){
             return new Message("Ошибка передачи объекта (недопустимые значения полей).", false);
         }
         this.vehicle.generateId();
-        stack.add(this.vehicle);
-        return new Message("Элемент успешно добавлен.", true);
+        this.vehicle = vehicleRepository.saveGet(this.vehicle);
+        if (vehicle != null){
+            stack.add(this.vehicle);
+            return new Message("Элемент успешно добавлен.", true);
+        }
+        return new Message("Ошибка создания объекта.", false);
+
     }
 
     private void chooseVehicleType(Vehicle vehicle, boolean from_script, UserInteractor interactor) {

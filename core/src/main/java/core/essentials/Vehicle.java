@@ -18,6 +18,7 @@ public class Vehicle implements Comparable<Vehicle>, Serializable {
     private float enginePower; //Значение поля должно быть больше 0
     private VehicleType type; //Поле не может быть null
     private FuelType fuelType; //Поле может быть null
+    private int ownerId;
 
     private static int maxId = 0;
 
@@ -167,5 +168,13 @@ public class Vehicle implements Comparable<Vehicle>, Serializable {
         element = String.format("<Vehicle>%s</Vehicle>", element);
 
         return element;
+    }
+
+    public int getOwnerId() {
+        return ownerId;
+    }
+
+    public void setOwnerId(int ownerId) {
+        this.ownerId = ownerId;
     }
 }

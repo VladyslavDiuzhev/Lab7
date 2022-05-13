@@ -4,6 +4,7 @@ import core.essentials.Vehicle;
 import core.interact.Message;
 import core.precommands.Precommand;
 
+import java.sql.Connection;
 import java.util.Collections;
 import java.util.Stack;
 
@@ -14,12 +15,12 @@ import java.util.Stack;
  * @version 1.0
  */
 public class AddIfMin extends Add {
-    public AddIfMin(boolean from_script) {
-        super(from_script);
+    public AddIfMin(boolean from_script, Connection connection) {
+        super(from_script, connection);
     }
 
-    public AddIfMin(Precommand precommand){
-        super(precommand);
+    public AddIfMin(Precommand precommand, Connection connection){
+        super(precommand, connection);
 
     }
 
@@ -31,8 +32,12 @@ public class AddIfMin extends Add {
         }
         if (stack.isEmpty() || this.vehicle.compareTo(Collections.min(stack)) < 0) {
             this.vehicle.generateId();
-            stack.add(this.vehicle);
-            return  new Message("Элемент успешно добавлен.", true);
+            this.vehicle = vehicleRepository.saveGet(this.vehicle);
+            if (vehicle != null){
+                stack.add(this.vehicle);
+                return new Message("Элемент успешно добавлен.", true);
+            }
+            return new Message("Ошибка создания объекта.", false);
         } else {
             return  new Message("Элемент не минимальный.", true);
         }

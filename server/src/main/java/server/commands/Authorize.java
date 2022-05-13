@@ -4,23 +4,28 @@ import core.essentials.UserInfo;
 import core.essentials.Vehicle;
 import core.interact.Message;
 import server.commands.interfaces.Command;
+import server.database.models.UserModel;
 
-import java.util.Objects;
+import java.sql.Connection;
 import java.util.Stack;
 
 public class Authorize implements Command {
     private UserInfo userInfo;
-    public Authorize(UserInfo userInfo){
+    private Connection conn;
+    private UserModel userModel = new UserModel();
+
+    public Authorize(UserInfo userInfo, Connection connection) {
         this.userInfo = userInfo;
+        this.conn = connection;
     }
 
     @Override
     public Message execute(Stack<Vehicle> stack) {
-        if (Objects.equals(userInfo.getLogin(), "login") && Objects.equals(userInfo.getPassword(), "password")){
-            return new Message("Авторизация пройдена!", true);
-        } else{
-            return new Message("Авторизация не пройдена!", true);
+        UserInfo newUser = userModel.findByLogin(conn, userInfo.getLogin());
+        if (newUser != null && newUser.getPassword().equals(userInfo.getPassword())) {
+            return new Message("Авторизация пройдена! Добро пожаловать, " + userInfo.getLogin(), true);
+        } else {
+            return new Message("Авторизация не пройдена!", false);
         }
-
     }
 }

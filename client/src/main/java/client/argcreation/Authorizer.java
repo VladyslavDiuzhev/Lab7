@@ -7,10 +7,17 @@ import core.interact.UserInteractor;
 public abstract class Authorizer {
 
     public static UserInfo getUserInfo(UserInteractor interactor) {
-        interactor.broadcastMessage("Введите логин: ", false);
-        String login = interactor.getData();
-        interactor.broadcastMessage("Введите пароль: ", false);
-        String password = interactor.getSecureData();
+        String login = "";
+        String password = "";
+        while (login.isEmpty()) {
+            interactor.broadcastMessage("Введите логин: ", false);
+            login = interactor.getData();
+
+        }
+        while (password.isEmpty()){
+            interactor.broadcastMessage("Введите пароль: ", false);
+            password = interactor.getSecureData();
+        }
         return new UserInfo(login, password);
     }
 }

@@ -1,6 +1,7 @@
 package server;
 
 import server.commands.Authorize;
+import server.commands.Register;
 import server.commands.interfaces.Command;
 import server.commands.interfaces.DateCommand;
 import core.essentials.StackInfo;
@@ -11,13 +12,16 @@ import core.interact.UserInteractor;
 import server.commands.CommandRouter;
 import core.main.VehicleStackXmlParser;
 import core.precommands.Precommand;
+import server.database.SetupDB;
 import server.database.models.UserModel;
+import server.database.repositories.VehicleRepository;
 
 import java.io.*;
 import java.lang.reflect.Field;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.sql.Connection;
 import java.time.ZonedDateTime;
 import java.util.HashMap;
 import java.util.Objects;
@@ -35,7 +39,7 @@ public class App {
     public static final int port = 8001;
     private static final UserInteractor adminInteractor = new ConsoleInteractor();
     private static Stack<Vehicle> collection = new Stack<>();
-    private static ZonedDateTime initDateTime;
+    private static ZonedDateTime initDateTime = ZonedDateTime.now();
     private static final File file = new File("collection.xml");
     private static ServerSocket serverSocket;
 
@@ -46,12 +50,12 @@ public class App {
     private static final ExecutorService processingPool = Executors.newFixedThreadPool(MAX_CONNECTIONS);
     private static final ExecutorService answerPool = Executors.newCachedThreadPool();
 
-    private static HashMap<String, Boolean> authorizedUsers = new HashMap<>();
+    private static HashMap<String, String> authorizedUsers = new HashMap<>();
+
+    private static Connection connectionDb;
 
 
     public static void main(String[] args) {
-        uploadInfoDB();
-
         if (!prepare()) {
             adminInteractor.broadcastMessage("Остановка запуска", true);
             return;
@@ -97,29 +101,45 @@ public class App {
         field.setInt(null, stackInfo.getMaxId());
     }
 
-    private static void uploadInfoDB(){
+    private static boolean uploadInfoDB() {
+        if (!SetupDB.createConnection(adminInteractor)) {
+            return false;
+        }
+        SetupDB.createTables(adminInteractor);
+        connectionDb = SetupDB.getConnection();
+        VehicleRepository vehicleRepository = new VehicleRepository(connectionDb);
+        collection = vehicleRepository.getAll();
+        if (collection == null) {
+            adminInteractor.broadcastMessage("Коллекция пуста.", true);
+        } else {
+            adminInteractor.broadcastMessage("Загружено " + (long) collection.size() + " элементов коллекции.", true);
+        }
 
+        return true;
     }
 
     private static boolean prepare() {
         adminInteractor.broadcastMessage("Подготовка к запуску...", true);
-        try {
-            uploadInfo();
-        } catch (FileNotFoundException | NoSuchFieldException | IllegalAccessException | NullPointerException ex) {
-            if (ex instanceof NoSuchFieldException || ex instanceof IllegalAccessException || ex instanceof NullPointerException) {
-                adminInteractor.broadcastMessage("Возникли проблемы при обработке файла. Данные не считаны. Создаем новый файл.", true);
-            }
-            initDateTime = ZonedDateTime.now();
-            FileWriter fileWriter;
-            try {
-                fileWriter = new FileWriter(file);
-                fileWriter.close();
-            } catch (IOException e) {
-                adminInteractor.broadcastMessage("Файл не может быть создан, недостаточно прав доступа или формат имени файла неверен.", true);
-                adminInteractor.broadcastMessage("Сообщение об ошибке: " + e.getMessage(), true);
-                return false;
-            }
+        if (!uploadInfoDB()) {
+            return false;
         }
+//        try {
+//            uploadInfo();
+//        } catch (FileNotFoundException | NoSuchFieldException | IllegalAccessException | NullPointerException ex) {
+//            if (ex instanceof NoSuchFieldException || ex instanceof IllegalAccessException || ex instanceof NullPointerException) {
+//                adminInteractor.broadcastMessage("Возникли проблемы при обработке файла. Данные не считаны. Создаем новый файл.", true);
+//            }
+//            initDateTime = ZonedDateTime.now();
+//            FileWriter fileWriter;
+//            try {
+//                fileWriter = new FileWriter(file);
+//                fileWriter.close();
+//            } catch (IOException e) {
+//                adminInteractor.broadcastMessage("Файл не может быть создан, недостаточно прав доступа или формат имени файла неверен.", true);
+//                adminInteractor.broadcastMessage("Сообщение об ошибке: " + e.getMessage(), true);
+//                return false;
+//            }
+//        }
         return createShutdownHook();
     }
 
@@ -137,7 +157,7 @@ public class App {
         while (!serverSocket.isClosed()) {
             try {
                 Socket socket = serverSocket.accept();
-                authorizedUsers.put(socket.getInetAddress().toString() + ":" + socket.getPort(), false);
+                authorizedUsers.put(socket.getInetAddress().toString() + ":" + socket.getPort(), "");
                 adminInteractor.broadcastMessage(String.format("Клиент (%s:%s) присоединился!", socket.getInetAddress().toString(), socket.getPort()), true);
 
                 requestPool.execute(new RequestService(socket));
@@ -193,6 +213,7 @@ public class App {
                 authorizedUsers.remove(socket.getInetAddress().toString() + ":" + socket.getPort());
             } catch (Exception ignored) {
             }
+            authorizedUsers.remove(socket.getInetAddress().toString() + ":" + socket.getPort());
             return false;
         }
     }
@@ -212,29 +233,50 @@ public class App {
         public void run() {
             Message msg;
             lock.lock();
-            Command command = CommandRouter.getCommand(preCommand);
-            if (command instanceof Authorize) {
-                if (authorizedUsers.get(currentUser)) {
+//            System.out.println(authorizedUsers);
+//            System.out.println(currentUser);
+            preCommand.setAuthor(authorizedUsers.get(currentUser));
+            Command command = CommandRouter.getCommand(preCommand, connectionDb);
+            if (command instanceof Register) {
+                if (!authorizedUsers.get(currentUser).isEmpty()) {
+                    msg = new Message("Пользователь уже авторизован!", false);
+                } else {
+                    msg = command.execute(collection);
+                }
+            } else if (command instanceof Authorize) {
+                if (!authorizedUsers.get(currentUser).isEmpty()) {
                     msg = new Message("Пользователь уже авторизован!", false);
                 } else {
                     msg = command.execute(collection);
                     if (msg.isSuccessful()) {
-                        authorizedUsers.put(currentUser, true);
+                        if (authorizedUsers.containsValue(msg.getText().substring(40))) {
+                            msg = new Message("Пользователь с таким именем уже авторизован!", false);
+                        } else {
+                            authorizedUsers.put(currentUser, msg.getText().substring(40));
+                            adminInteractor.broadcastMessage("Пользователь " + authorizedUsers.get(currentUser) + "  авторизован!", true);
+                        }
                     }
                 }
 
-            } else if (command instanceof DateCommand && authorizedUsers.get(currentUser)) {
+            } else if (command instanceof DateCommand && !authorizedUsers.get(currentUser).isEmpty()) {
                 msg = ((DateCommand) command).execute(collection, initDateTime);
             } else {
-                if (command != null && authorizedUsers.get(currentUser)) {
-                    msg = command.execute(collection);
-                } else if (!authorizedUsers.get(currentUser)) {
+                if (command != null && !authorizedUsers.get(currentUser).isEmpty()) {
+                    try {
+                        msg = command.execute(collection);
+                    } catch (Exception e){
+                        e.printStackTrace();
+                        msg = new Message("Возникла ошибка.", true);
+                    }
+
+                } else if (authorizedUsers.get(currentUser).isEmpty()) {
                     msg = new Message("Только авторизованные пользователи могут выполнять команды!", true);
                 } else {
                     msg = new Message("Ошибка при обработке команды.", false);
                 }
             }
             lock.unlock();
+//            System.out.println(msg.getText());
             answerPool.submit(new AnswerService(this.outputStream, msg));
         }
     }

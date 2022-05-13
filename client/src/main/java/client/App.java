@@ -64,12 +64,22 @@ public class App {
         while (run) {
             try {
                 if (recon | socket.isClosed() | !socket.isConnected()) {
+                    authorized = false;
                     connect();
                     recon = false;
                 }
                 Precommand precommand;
                 if (!authorized) {
-                    precommand = PreCommandRouter.getCommand("authorize", false, userInteractor);
+                    userInteractor.broadcastMessage("Выберите опцию (1-регистрация, 2-авторизация): ", false);
+                    String inp = userInteractor.getData();
+                    if (Objects.equals(inp, "1")) {
+                        precommand = PreCommandRouter.getCommand("register", false, userInteractor);
+                    } else if (Objects.equals(inp, "2")) {
+                        precommand = PreCommandRouter.getCommand("authorize", false, userInteractor);
+                    } else {
+                        continue;
+                    }
+
                 } else {
                     userInteractor.broadcastMessage("\nВведите команду: ", false);
                     String potentialCommand = userInteractor.getData();
@@ -155,6 +165,9 @@ public class App {
 
                 userInteractor.broadcastMessage(msg.getText(), true);
                 if (!msg.isSuccessful()) {
+                    if (Objects.equals(precommand.getCommandName(), "authorize") || Objects.equals(precommand.getCommandName(), "register")) {
+                        continue;
+                    }
                     run = false;
                 } else if (Objects.equals(precommand.getCommandName(), "authorize")) {
                     authorized = true;
@@ -162,6 +175,7 @@ public class App {
                 }
 
             } catch (Exception e) {
+                e.printStackTrace();
                 userInteractor.broadcastMessage("Ошибка " + e.getMessage(), true);
             }
         }

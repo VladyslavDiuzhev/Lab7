@@ -5,6 +5,7 @@ public class ObjectIdPrecommand implements Precommand{
     private final String commandName;
     private final String id;
     private boolean fromScript;
+    private String author;
 
     public ObjectIdPrecommand(String name, String id){
         this.commandName = name;
@@ -33,5 +34,15 @@ public class ObjectIdPrecommand implements Precommand{
 
     public String getId() {
         return id;
+    }
+
+    @Override
+    public void setAuthor(String login) {
+        this.author = login;
+    }
+
+    @Override
+    public String getAuthor() {
+        return this.author;
     }
 }

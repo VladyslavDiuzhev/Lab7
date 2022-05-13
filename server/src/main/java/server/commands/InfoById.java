@@ -6,7 +6,10 @@ import server.commands.interfaces.Command;
 import server.commands.interfaces.IdCommand;
 import core.essentials.Vehicle;
 import core.interact.Message;
+import server.database.repositories.UserRepository;
+import server.database.repositories.VehicleRepository;
 
+import java.sql.Connection;
 import java.util.ArrayList;
 import java.util.Stack;
 
@@ -23,8 +26,11 @@ public class InfoById implements Command, IdCommand {
         this.argument = args.get(0);
     }
 
-    public InfoById(Precommand precommand) {
+    private Connection connection;
+
+    public InfoById(Precommand precommand, Connection connection) {
         this.argument = ((IdPrecommand) precommand).getId();
+        this.connection = connection;
     }
 
     @Override
@@ -34,15 +40,19 @@ public class InfoById implements Command, IdCommand {
             return new Message("Неверный аргумент. Ожидается число (id). Или данного элемента не существует.", true);
         }
         Vehicle vehicle = stack.get(index);
+        UserRepository userRepository = new UserRepository(connection);
+        System.out.println();
+
         String info = String.format("id: %d \n" +
+                        "Создатель: %s \n" +
                         "Название: %s \n" +
                         "Тип: %s \n" +
                         "Дата создания: %s \n" +
                         "Мощность: %s \n" +
                         "Тип топлива: %s \n" +
-                        "Координаты: %s", vehicle.getId(), vehicle.getName(), vehicle.getType(),
-                vehicle.getCreationDate(), vehicle.getEnginePower(), vehicle.getFuelType(),
-                vehicle.getCoordinates());
+                        "Координаты: %s", vehicle.getId(), userRepository.getById(vehicle.getOwnerId()).getLogin(),
+                vehicle.getName(), vehicle.getType(), vehicle.getCreationDate(), vehicle.getEnginePower(),
+                vehicle.getFuelType(), vehicle.getCoordinates());
         return new Message(info, true);
     }
 }

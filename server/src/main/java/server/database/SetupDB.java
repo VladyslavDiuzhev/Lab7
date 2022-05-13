@@ -1,9 +1,11 @@
 package server.database;
 
+import core.interact.UserInteractor;
+import server.database.models.*;
+
 import java.io.FileInputStream;
 import java.sql.Connection;
 import java.sql.DriverManager;
-import java.sql.PreparedStatement;
 import java.util.Properties;
 
 public abstract class SetupDB {
@@ -13,7 +15,7 @@ public abstract class SetupDB {
         return connection;
     }
 
-    public static boolean createConnection() {
+    public static boolean createConnection(UserInteractor userInteractor) {
         Connection c;
         try {
             Class.forName("org.postgresql.Driver");
@@ -21,19 +23,28 @@ public abstract class SetupDB {
 //            info.load(new FileInputStream("db.cfg"));
             c = DriverManager.getConnection("jdbc:postgresql://localhost:5432/studs", "s336225", "eoc653");
 
-//            System.out.println("Успешное соединение с БД.");
-            //          info.load(new FileInputStream("src/main/java/info_helios.cfg"));
-//            c = DriverManager.getConnection("jdbc:postgresql://pg:5432/studs", "s", "");
+            userInteractor.broadcastMessage("Успешное соединение с БД.", true);
 
             connection = c;
             return true;
         } catch (Exception e) {
+            userInteractor.broadcastMessage("Ошибка при соединении с БД.", true);
             return false;
         }
     }
 
-    public static void createTables() {
-        
-        System.out.println("SQL tables are ready to use\n");
+    public static void createTables(UserInteractor userInteractor) {
+        Model[] models = {
+                new UserModel(),
+                new VehicleModel()
+        };
+        for (Model model : models) {
+            if (model.createTable(connection)) {
+                userInteractor.broadcastMessage(String.format("Таблица %s создана!", model.getName()), true);
+            } else {
+                userInteractor.broadcastMessage(String.format("Таблица %s уже существует!", model.getName()), true);
+            }
+        }
+        userInteractor.broadcastMessage("Преднастройка БД завершена!", true);
     }
 }

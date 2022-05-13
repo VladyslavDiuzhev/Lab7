@@ -1,10 +1,13 @@
 package core.precommands;
 
+import core.essentials.UserInfo;
+
 public class BasicPrecommand implements Precommand {
 
     private Object arg;
     private final String commandName;
     private boolean fromScript;
+    private String author;
 
     public BasicPrecommand(String name){
         this.commandName = name;
@@ -29,5 +32,15 @@ public class BasicPrecommand implements Precommand {
     @Override
     public boolean isFromScript() {
         return this.fromScript;
+    }
+
+    @Override
+    public void setAuthor(String login) {
+        this.author = login;
+    }
+
+    @Override
+    public String getAuthor() {
+        return this.author;
     }
 }
